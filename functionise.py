@@ -4,7 +4,7 @@ import numpy as np
 import time
 from tensorflow.keras.models import load_model
 from utilities import estimate_hand_state, play_round_logic, countdown_before_round, wait_for_both_players_to_get_ready, \
-    determine_winner, display_red_and_emoji_on_faces
+    determine_winner, display_red_and_emoji_on_faces, display_red_mask_on_faces, display_emoji_on_faces
 
 # Hand states map
 HAND_STATES = {0: "rock", 1: "paper", 2: "scissors"}
@@ -14,57 +14,6 @@ model = load_model('rock_paper_scissors_model.h5')
 # Mediapipe settings
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
-
-def display_red_mask_on_faces(frame):
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-
-    for (x, y, w, h) in faces:
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), -1)  # Draw a filled red rectangle
-
-    return frame
-
-def display_emoji_on_faces(frame, emoji_path='emoji.png'):
-    # Load the emoji image
-    emoji = cv2.imread(emoji_path, cv2.IMREAD_UNCHANGED)  # Attempt to load with alpha channel
-    if emoji is None:
-        raise FileNotFoundError(f"Emoji image not found at '{emoji_path}'. Ensure the path is correct and the image exists.")
-
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-
-    for (x, y, w, h) in faces:
-        # Resize the emoji to match the face dimensions
-        resized_emoji = cv2.resize(emoji, (w, h))
-
-        # Create a circular mask for the emoji
-        mask = np.zeros((h, w), dtype=np.uint8)
-        center = (w // 2, h // 2)
-        radius = min(w, h) // 2
-        cv2.circle(mask, center, radius, 255, -1)
-
-        # If the emoji has an alpha channel
-        if resized_emoji.shape[2] == 4:
-            emoji_alpha = resized_emoji[:, :, 3] / 255.0
-            emoji_rgb = resized_emoji[:, :, :3]
-        else:
-            emoji_alpha = np.ones((h, w), dtype=np.float32)
-            emoji_rgb = resized_emoji
-
-        # Combine the circular mask with the alpha channel
-        combined_alpha = emoji_alpha * (mask / 255.0)
-
-        # Overlay the emoji onto the frame
-        for c in range(3):  # Loop over color channels
-            frame[y:y+h, x:x+w, c] = (
-                combined_alpha * emoji_rgb[:, :, c] + (1 - combined_alpha) * frame[y:y+h, x:x+w, c]
-            )
-
-    return frame
-
-
 
 def detect_hands():
     cap = cv2.VideoCapture(0)  # Open the camera
@@ -120,7 +69,7 @@ def detect_hands():
                     player2_score += 1
 
             # End the game if a player reaches 5 points
-            if player1_score < 1 or player2_score < 1:  # update later
+            if True:  # update later
                 break
 
         cap.release()
@@ -136,10 +85,13 @@ def detect_hands():
 
             # Apply the red mask to detected faces
             # frame_with_mask = display_red_mask_on_faces(frame)
-            frame_with_overlays = display_red_and_emoji_on_faces(frame, emoji_path='imoji2.jpg')
-
             # cv2.imshow("Game Over - Red Mask", frame_with_mask)
-            cv2.imshow("Game Over - Red Mask and Emoji", frame_with_overlays)
+
+            frame_with_mask = display_emoji_on_faces(frame, emoji_path='imoji2.jpg')
+            cv2.imshow("Game Over - Emoji", frame_with_mask)
+
+            # frame_with_overlays = display_red_and_emoji_on_faces(frame, emoji_path='imoji2.jpg')
+            # cv2.imshow("Game Over - Red Mask and Emoji", frame_with_overlays)
 
             # Exit the loop if 'q' is pressed
             if cv2.waitKey(1) & 0xFF == ord('q'):

@@ -303,3 +303,52 @@ def display_red_and_emoji_on_faces(frame, emoji_path='emoji.png'):
         )
 
     return frame
+
+def display_red_mask_on_faces(frame):
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+    for (x, y, w, h) in faces:
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), -1)  # Draw a filled red rectangle
+
+    return frame
+
+def display_emoji_on_faces(frame, emoji_path='emoji.png'):
+    # Load the emoji image
+    emoji = cv2.imread(emoji_path, cv2.IMREAD_UNCHANGED)  # Attempt to load with alpha channel
+    if emoji is None:
+        raise FileNotFoundError(f"Emoji image not found at '{emoji_path}'. Ensure the path is correct and the image exists.")
+
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+    for (x, y, w, h) in faces:
+        # Resize the emoji to match the face dimensions
+        resized_emoji = cv2.resize(emoji, (w, h))
+
+        # Create a circular mask for the emoji
+        mask = np.zeros((h, w), dtype=np.uint8)
+        center = (w // 2, h // 2)
+        radius = min(w, h) // 2
+        cv2.circle(mask, center, radius, 255, -1)
+
+        # If the emoji has an alpha channel
+        if resized_emoji.shape[2] == 4:
+            emoji_alpha = resized_emoji[:, :, 3] / 255.0
+            emoji_rgb = resized_emoji[:, :, :3]
+        else:
+            emoji_alpha = np.ones((h, w), dtype=np.float32)
+            emoji_rgb = resized_emoji
+
+        # Combine the circular mask with the alpha channel
+        combined_alpha = emoji_alpha * (mask / 255.0)
+
+        # Overlay the emoji onto the frame
+        for c in range(3):  # Loop over color channels
+            frame[y:y+h, x:x+w, c] = (
+                combined_alpha * emoji_rgb[:, :, c] + (1 - combined_alpha) * frame[y:y+h, x:x+w, c]
+            )
+
+    return frame
