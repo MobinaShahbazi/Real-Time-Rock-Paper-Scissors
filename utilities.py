@@ -205,3 +205,101 @@ def estimate_hand_state(landmarks):
     elif all([not thumb_folded, index_extended, middle_extended, ring_folded, pinky_folded]):
         return 2  # Scissors
     return 0  # Unknown state
+#
+# def display_red_and_emoji_on_faces(frame, emoji_path='emoji.png'):
+#     # Load the emoji image
+#     emoji = cv2.imread(emoji_path, cv2.IMREAD_UNCHANGED)  # Attempt to load with alpha channel
+#     if emoji is None:
+#         raise FileNotFoundError(f"Emoji image not found at '{emoji_path}'. Ensure the path is correct and the image exists.")
+#
+#     # Load the Haar Cascade for face detection
+#     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+#     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#     faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+#
+#     # Process each face
+#     for idx, (x, y, w, h) in enumerate(faces):
+#         if idx == 0:
+#             # Apply a red mask to the first detected face
+#             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), -1)
+#         elif idx == 1:
+#             # Resize the emoji to match the second face dimensions
+#             resized_emoji = cv2.resize(emoji, (w, h))
+#
+#             # Create a circular mask for the emoji
+#             mask = np.zeros((h, w), dtype=np.uint8)
+#             center = (w // 2, h // 2)
+#             radius = min(w, h) // 2
+#             cv2.circle(mask, center, radius, 255, -1)
+#
+#             # If the emoji has an alpha channel
+#             if resized_emoji.shape[2] == 4:
+#                 emoji_alpha = resized_emoji[:, :, 3] / 255.0
+#                 emoji_rgb = resized_emoji[:, :, :3]
+#             else:
+#                 emoji_alpha = np.ones((h, w), dtype=np.float32)
+#                 emoji_rgb = resized_emoji
+#
+#             # Combine the circular mask with the alpha channel
+#             combined_alpha = emoji_alpha * (mask / 255.0)
+#
+#             # Overlay the emoji onto the frame
+#             for c in range(3):  # Loop over color channels
+#                 frame[y:y+h, x:x+w, c] = (
+#                     combined_alpha * emoji_rgb[:, :, c] + (1 - combined_alpha) * frame[y:y+h, x:x+w, c]
+#                 )
+#
+#     return frame
+
+def display_red_and_emoji_on_faces(frame, emoji_path='emoji.png'):
+    # Load the emoji image
+    emoji = cv2.imread(emoji_path, cv2.IMREAD_UNCHANGED)  # Attempt to load with alpha channel
+    if emoji is None:
+        raise FileNotFoundError(f"Emoji image not found at '{emoji_path}'. Ensure the path is correct and the image exists.")
+
+    # Load the Haar Cascade for face detection
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+    if len(faces) < 2:
+        print("Less than two faces detected. Cannot apply both effects.")
+        return frame
+
+    # Sort faces by their x-coordinates (left to right)
+    faces = sorted(faces, key=lambda f: f[0])
+
+    # Get the left face and right face
+    (x_left, y_left, w_left, h_left) = faces[0]  # Face on the left
+    (x_right, y_right, w_right, h_right) = faces[1]  # Face on the right
+
+    # Apply red mask to the left face
+    cv2.rectangle(frame, (x_left, y_left), (x_left + w_left, y_left + h_left), (0, 0, 255), -1)
+
+    # Resize the emoji to match the right face dimensions
+    resized_emoji = cv2.resize(emoji, (w_right, h_right))
+
+    # Create a circular mask for the emoji
+    mask = np.zeros((h_right, w_right), dtype=np.uint8)
+    center = (w_right // 2, h_right // 2)
+    radius = min(w_right, h_right) // 2
+    cv2.circle(mask, center, radius, 255, -1)
+
+    # If the emoji has an alpha channel
+    if resized_emoji.shape[2] == 4:
+        emoji_alpha = resized_emoji[:, :, 3] / 255.0
+        emoji_rgb = resized_emoji[:, :, :3]
+    else:
+        emoji_alpha = np.ones((h_right, w_right), dtype=np.float32)
+        emoji_rgb = resized_emoji
+
+    # Combine the circular mask with the alpha channel
+    combined_alpha = emoji_alpha * (mask / 255.0)
+
+    # Overlay the emoji onto the right face
+    for c in range(3):  # Loop over color channels
+        frame[y_right:y_right+h_right, x_right:x_right+w_right, c] = (
+            combined_alpha * emoji_rgb[:, :, c] + (1 - combined_alpha) * frame[y_right:y_right+h_right, x_right:x_right+w_right, c]
+        )
+
+    return frame

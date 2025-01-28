@@ -3,7 +3,8 @@ import mediapipe as mp
 import numpy as np
 import time
 from tensorflow.keras.models import load_model
-from utilities import estimate_hand_state, play_round_logic, countdown_before_round, wait_for_both_players_to_get_ready, determine_winner
+from utilities import estimate_hand_state, play_round_logic, countdown_before_round, wait_for_both_players_to_get_ready, \
+    determine_winner, display_red_and_emoji_on_faces
 
 # Hand states map
 HAND_STATES = {0: "rock", 1: "paper", 2: "scissors"}
@@ -38,21 +39,29 @@ def display_emoji_on_faces(frame, emoji_path='emoji.png'):
         # Resize the emoji to match the face dimensions
         resized_emoji = cv2.resize(emoji, (w, h))
 
-        # Check if the emoji has an alpha channel
+        # Create a circular mask for the emoji
+        mask = np.zeros((h, w), dtype=np.uint8)
+        center = (w // 2, h // 2)
+        radius = min(w, h) // 2
+        cv2.circle(mask, center, radius, 255, -1)
+
+        # If the emoji has an alpha channel
         if resized_emoji.shape[2] == 4:
-            # Extract the alpha channel for transparency
-            emoji_alpha = resized_emoji[:, :, 3] / 255.0  # Normalize to 0-1 range
-            emoji_rgb = resized_emoji[:, :, :3]  # Get the BGR channels
+            emoji_alpha = resized_emoji[:, :, 3] / 255.0
+            emoji_rgb = resized_emoji[:, :, :3]
         else:
-            # If no alpha channel, treat emoji as fully opaque
-            emoji_alpha = np.ones((h, w))  # Fully opaque
+            emoji_alpha = np.ones((h, w), dtype=np.float32)
             emoji_rgb = resized_emoji
+
+        # Combine the circular mask with the alpha channel
+        combined_alpha = emoji_alpha * (mask / 255.0)
 
         # Overlay the emoji onto the frame
         for c in range(3):  # Loop over color channels
             frame[y:y+h, x:x+w, c] = (
-                emoji_alpha * emoji_rgb[:, :, c] + (1 - emoji_alpha) * frame[y:y+h, x:x+w, c]
+                combined_alpha * emoji_rgb[:, :, c] + (1 - combined_alpha) * frame[y:y+h, x:x+w, c]
             )
+
     return frame
 
 
@@ -127,10 +136,10 @@ def detect_hands():
 
             # Apply the red mask to detected faces
             # frame_with_mask = display_red_mask_on_faces(frame)
-            frame_with_mask = display_emoji_on_faces(frame, emoji_path='imoji.png')
+            frame_with_overlays = display_red_and_emoji_on_faces(frame, emoji_path='imoji2.jpg')
 
-            cv2.imshow("Game Over - Red Mask", frame_with_mask)
-
+            # cv2.imshow("Game Over - Red Mask", frame_with_mask)
+            cv2.imshow("Game Over - Red Mask and Emoji", frame_with_overlays)
 
             # Exit the loop if 'q' is pressed
             if cv2.waitKey(1) & 0xFF == ord('q'):
