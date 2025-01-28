@@ -6,7 +6,7 @@ from tensorflow.keras.models import load_model
 
 HAND_STATES = {0: "rock", 1: "paper", 2: "scissors"}
 
-model = load_model('rock_paper_scissors_model.h5')
+model = load_model('rock_paper_scissors_cnn.h5')
 # Mediapipe settings
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
@@ -171,14 +171,8 @@ def play_round_logic(cap, hands, frame_height, frame_width, player1_moves, playe
             break
 
     return player1_choice, player2_choice
+
 def estimate_hand_state(landmarks):
-    """
-    Estimate hand state based on MediaPipe landmarks.
-    Arguments:
-        landmarks: Normalized hand landmarks from MediaPipe.
-    Returns:
-        int: 0 for 'rock', 1 for 'paper', and 2 for 'scissors'.
-    """
     thumb_tip = landmarks[4]
     index_tip = landmarks[8]
     middle_tip = landmarks[12]
@@ -199,12 +193,12 @@ def estimate_hand_state(landmarks):
     pinky_folded = distance(pinky_tip, palm_base) < distance(thumb_mcp, palm_base) * 1.1
 
     if all([thumb_folded, not index_extended, not middle_extended, ring_folded, pinky_folded]):
-        return 0  # Rock
+        return 0
     elif all([not thumb_folded, index_extended, middle_extended, not ring_folded, not pinky_folded]):
-        return 1  # Paper
+        return 1
     elif all([not thumb_folded, index_extended, middle_extended, ring_folded, pinky_folded]):
-        return 2  # Scissors
-    return 0  # Unknown state
+        return 2
+    return 0
 #
 # def display_red_and_emoji_on_faces(frame, emoji_path='emoji.png'):
 #     # Load the emoji image

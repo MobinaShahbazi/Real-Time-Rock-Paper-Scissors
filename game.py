@@ -9,7 +9,7 @@ from utilities import estimate_hand_state, play_round_logic, countdown_before_ro
 # Hand states map
 HAND_STATES = {0: "rock", 1: "paper", 2: "scissors"}
 
-model = load_model('rock_paper_scissors_model.h5')
+model = load_model('rock_paper_scissors_cnn.h5')
 
 # Mediapipe settings
 mp_hands = mp.solutions.hands
@@ -69,7 +69,7 @@ def detect_hands():
                     player2_score += 1
 
             # End the game if a player reaches 5 points
-            if True:  # update later
+            if player1_score == 5 or player2_score == 5:
                 break
 
         cap.release()
