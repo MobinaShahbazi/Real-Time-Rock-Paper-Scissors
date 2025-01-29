@@ -4,7 +4,7 @@ import numpy as np
 import time
 from tensorflow.keras.models import load_model
 from utilities import estimate_hand_state, play_round_logic, countdown_before_round, wait_for_both_players_to_get_ready, \
-    determine_winner, display_red_and_emoji_on_faces, display_red_mask_on_faces, display_emoji_on_faces
+    determine_winner, display_red_and_emoji_on_faces, display_red_mask_on_faces, display_emoji_on_faces, predict_state
 
 # Hand states map
 HAND_STATES = {0: "rock", 1: "paper", 2: "scissors"}
